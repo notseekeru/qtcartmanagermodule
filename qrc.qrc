@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>assets/Alla Carbonara.png</file>
+        <file>assets/Bacardi Black.png</file>
+    </qresource>
+</RCC>

@@ -1,296 +1,136 @@
-#include <QAbstractListModel>
-#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QMap>
-#include <QString>
-#include <QVariantList>
-#include <QVariantMap>
+#include <QAbstractListModel>
 
+// Product data structure
 struct Product {
     int id;
     QString name;
-    QString description;
     double price;
     QString image;
 };
 
-class ProductModel : public QAbstractListModel
-{
+// Product list model for QML
+class ProductModel : public QAbstractListModel {
     Q_OBJECT
+    QList<Product> products;
+
 public:
-    enum ProductRoles {
-        IdRole = Qt::UserRole + 1,
-        ProductIdRole,
-        NameRole,
-        DescriptionRole,
-        PriceRole,
-        ImageRole
-    };
+    enum { ProductIdRole = Qt::UserRole + 1, NameRole, PriceRole, ImageRole };
 
-    explicit ProductModel(QObject *parent = nullptr);
+    ProductModel(QObject *parent = nullptr) : QAbstractListModel(parent) {
+        products = {
+            {1, "Bacardi Black", 25.99, "qrc:/assets/Bacardi Black.png"},
+            {2, "Alla Carbonara", 15.50, "qrc:/assets/Alla Carbonara.png"},
+            {3, "Burger", 8.99, ""},
+            {4, "Pizza", 12.50, ""},
+            {5, "Fries", 3.99, ""},
+            {6, "Soda", 1.99, ""}
+        };
+    }
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-    QHash<int, QByteArray> roleNames() const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override {
+        return parent.isValid() ? 0 : products.count();
+    }
 
-    void setProducts(const QList<Product> &products);
-    const Product *productById(int id) const;
+    QVariant data(const QModelIndex &index, int role) const override {
+        if (!index.isValid() || index.row() >= products.count())
+            return {};
+        
+        const Product &p = products[index.row()];
+        if (role == ProductIdRole) return p.id;
+        if (role == NameRole) return p.name;
+        if (role == PriceRole) return p.price;
+        if (role == ImageRole) return p.image;
+        return {};
+    }
 
-private:
-    QList<Product> m_products;
-};
+    QHash<int, QByteArray> roleNames() const override {
+        return {{ProductIdRole, "productId"}, {NameRole, "name"}, {PriceRole, "price"}, {ImageRole, "image"}};
+    }
 
-struct CartItem {
-    Product product;
-    int quantity = 0;
-
-    double lineTotal() const { return product.price * quantity; }
-
-    QVariantMap toVariantMap() const
-    {
-        QVariantMap map;
-        map["id"] = product.id;
-        map["name"] = product.name;
-        map["price"] = product.price;
-        map["quantity"] = quantity;
-        map["lineTotal"] = lineTotal();
-        return map;
+    const Product* findProduct(int id) const {
+        for (const Product &p : products)
+            if (p.id == id) return &p;
+        return nullptr;
     }
 };
 
-class CartManager : public QObject
-{
+// Cart manager
+class CartManager : public QObject {
     Q_OBJECT
     Q_PROPERTY(QVariantList cartItems READ cartItems NOTIFY cartChanged)
     Q_PROPERTY(int itemCount READ itemCount NOTIFY cartChanged)
     Q_PROPERTY(double totalPrice READ totalPrice NOTIFY cartChanged)
 
+    ProductModel *productModel;
+    QMap<int, int> quantities;
+
 public:
-    explicit CartManager(ProductModel *model, QObject *parent = nullptr);
+    CartManager(ProductModel *model, QObject *parent = nullptr) 
+        : QObject(parent), productModel(model) {}
 
-    Q_INVOKABLE void addProduct(int productId);
-    Q_INVOKABLE void removeProduct(int productId);
-    Q_INVOKABLE void clearCart();
+    Q_INVOKABLE void addProduct(int id) {
+        if (productModel->findProduct(id)) {
+            quantities[id]++;
+            emit cartChanged();
+        }
+    }
 
-    QVariantList cartItems() const;
-    int itemCount() const;
-    double totalPrice() const;
+    Q_INVOKABLE void clearCart() {
+        if (!quantities.isEmpty()) {
+            quantities.clear();
+            emit cartChanged();
+        }
+    }
+
+    QVariantList cartItems() const {
+        QVariantList items;
+        for (auto it = quantities.cbegin(); it != quantities.cend(); ++it) {
+            const Product *p = productModel->findProduct(it.key());
+            if (p) {
+                QVariantMap item;
+                item["name"] = p->name;
+                item["quantity"] = it.value();
+                item["lineTotal"] = p->price * it.value();
+                items.append(item);
+            }
+        }
+        return items;
+    }
+
+    int itemCount() const {
+        int total = 0;
+        for (int qty : quantities) total += qty;
+        return total;
+    }
+
+    double totalPrice() const {
+        double total = 0;
+        for (auto it = quantities.cbegin(); it != quantities.cend(); ++it) {
+            const Product *p = productModel->findProduct(it.key());
+            if (p) total += p->price * it.value();
+        }
+        return total;
+    }
 
 signals:
     void cartChanged();
-
-private:
-    ProductModel *m_productModel;
-    QMap<int, int> m_quantities;
 };
 
-static QList<Product> buildProductCatalog()
-{
-    return {
-        { 1, QStringLiteral("Nordic Chair"), QStringLiteral("Clean lines and natural wood."), 149.0, QStringLiteral("") },
-        { 2, QStringLiteral("Maple Desk"), QStringLiteral("Solid maple workspace with room for dual monitors."), 299.0, QStringLiteral("") },
-        { 3, QStringLiteral("Aurora Lamp"), QStringLiteral("Soft, diffused light for evening work sessions."), 89.0, QStringLiteral("") }
-    };
-}
-
-ProductModel::ProductModel(QObject *parent)
-    : QAbstractListModel(parent)
-{
-}
-
-int ProductModel::rowCount(const QModelIndex &parent) const
-{
-    if (parent.isValid())
-        return 0;
-    return m_products.count();
-}
-
-QVariant ProductModel::data(const QModelIndex &index, int role) const
-{
-    if (!index.isValid() || index.row() < 0 || index.row() >= m_products.count())
-        return {};
-
-    const Product &product = m_products.at(index.row());
-
-    switch (role) {
-    case IdRole:
-    case ProductIdRole:
-        return product.id;
-    case NameRole:
-        return product.name;
-    case DescriptionRole:
-        return product.description;
-    case PriceRole:
-        return product.price;
-    case ImageRole:
-        return product.image;
-    default:
-        return {};
-    }
-}
-
-QHash<int, QByteArray> ProductModel::roleNames() const
-{
-    QHash<int, QByteArray> roles;
-    roles[IdRole] = "id";
-    roles[ProductIdRole] = "productId";
-    roles[NameRole] = "name";
-    roles[DescriptionRole] = "description";
-    roles[PriceRole] = "price";
-    roles[ImageRole] = "image";
-    return roles;
-}
-
-void ProductModel::setProducts(const QList<Product> &products)
-{
-    beginResetModel();
-    m_products = products;
-    endResetModel();
-}
-
-const Product *ProductModel::productById(int id) const
-{
-    for (const Product &product : m_products) {
-        if (product.id == id)
-            return &product;
-    }
-    return nullptr;
-}
-
-CartManager::CartManager(ProductModel *model, QObject *parent)
-    : QObject(parent)
-    , m_productModel(model)
-{
-}
-
-void CartManager::addProduct(int productId)
-{
-    if (!m_productModel->productById(productId))
-        return;
-
-    ++m_quantities[productId];
-    emit cartChanged();
-}
-
-void CartManager::removeProduct(int productId)
-{
-    auto it = m_quantities.find(productId);
-    if (it == m_quantities.end())
-        return;
-
-    --(*it);
-    if (*it <= 0)
-        m_quantities.remove(productId);
-
-    emit cartChanged();
-}
-
-void CartManager::clearCart()
-{
-    if (m_quantities.isEmpty())
-        return;
-
-    m_quantities.clear();
-    emit cartChanged();
-}
-
-QVariantList CartManager::cartItems() const
-{
-    QVariantList items;
-
-    for (auto it = m_quantities.cbegin(); it != m_quantities.cend(); ++it) {
-        const Product *product = m_productModel->productById(it.key());
-        if (!product)
-            continue;
-
-        CartItem entry{*product, it.value()};
-        items.append(entry.toVariantMap());
-    }
-
-    return items;
-}
-
-int CartManager::itemCount() const
-{
-    int total = 0;
-    for (int quantity : m_quantities)
-        total += quantity;
-    return total;
-}
-
-double CartManager::totalPrice() const
-{
-    double total = 0.0;
-    for (auto it = m_quantities.cbegin(); it != m_quantities.cend(); ++it) {
-        const Product *product = m_productModel->productById(it.key());
-        if (!product)
-            continue;
-        CartItem entry{*product, it.value()};
-        total += entry.lineTotal();
-    }
-    return total;
-}
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
 
     ProductModel productModel;
-    productModel.setProducts(buildProductCatalog());
-
     CartManager cartManager(&productModel);
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("productModel", &productModel);
     engine.rootContext()->setContextProperty("cartManager", &cartManager);
 
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
-    engine.loadFromModule("cartmanager", "Main");
-
-    return app.exec();
-}#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include <QQmlContext>
-
-#include "cartmanager.h"
-#include "productmodel.h"
-
-static QList<Product> buildProductCatalog()
-{
-    return {
-        { 1, QStringLiteral("Nordic Chair"), QStringLiteral("Clean lines and natural wood."), 149.0, QStringLiteral("" ) },
-        { 2, QStringLiteral("Maple Desk"), QStringLiteral("Solid maple workspace with room for dual monitors."), 299.0, QStringLiteral("") },
-        { 3, QStringLiteral("Aurora Lamp"), QStringLiteral("Soft, diffused light for evening work sessions."), 89.0, QStringLiteral("") }
-    };
-}
-
-int main(int argc, char *argv[])
-{
-    QGuiApplication app(argc, argv);
-
-    QQmlApplicationEngine engine;
-    ProductModel productModel;
-    productModel.setProducts(buildProductCatalog());
-
-    CartManager cartManager(&productModel);
-
-    engine.rootContext()->setContextProperty("productModel", &productModel);
-    engine.rootContext()->setContextProperty("cartManager", &cartManager);
-
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
-    engine.loadFromModule("cartmanager", "Main");
-
+    engine.loadFromModule("cartmanagerstruct", "Main");
     return app.exec();
 }
+
+#include "main.moc"
