@@ -1,134 +1,86 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QAbstractListModel>
 
-// Product data structure
-struct Product {
-    int id;
-    QString name;
-    double price;
-    QString image;
-};
-
-// Product list model for QML
-class ProductModel : public QAbstractListModel {
+ class OrderManager : public QObject
+{,.
     Q_OBJECT
-    QList<Product> products;
+
+    QVariantList m_menuItems;
+    QMap<int, int> m_orderQuantities;
 
 public:
-    enum { ProductIdRole = Qt::UserRole + 1, NameRole, PriceRole, ImageRole };
-
-    ProductModel(QObject *parent = nullptr) : QAbstractListModel(parent) {
-        products = {
-            {1, "Bacardi Black", 25.99, "qrc:/assets/Bacardi Black.png"},
-            {2, "Alla Carbonara", 15.50, "qrc:/assets/Alla Carbonara.png"},
-            {3, "Burger", 8.99, ""},
-            {4, "Pizza", 12.50, ""},
-            {5, "Fries", 3.99, ""},
-            {6, "Soda", 1.99, ""},
+    OrderManager() {
+        m_menuItems = {
+            QVariantMap{{"id", 1}, {"name", "Bacardi Black"}, {"price", 25.99}, {"image", "qrc:/assets/Bacardi Black.png"}},
+            QVariantMap{{"id", 2}, {"name", "Alla Carbonara"}, {"price", 15.50}, {"image", "qrc:/assets/Alla Carbonara.png"}},
         };
     }
 
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override {
-        return parent.isValid() ? 0 : products.count();
+    Q_INVOKABLE QVariantList getMenuItems() {z
+        return m_menuItems;
     }
 
-    QVariant data(const QModelIndex &index, int role) const override {
-        if (!index.isValid() || index.row() >= products.count())
-            return {};
-        
-        const Product &p = products[index.row()];
-        if (role == ProductIdRole) return p.id;
-        if (role == NameRole) return p.name;
-        if (role == PriceRole) return p.price;
-        if (role == ImageRole) return p.image;
-        return {};
+    Q_INVOKABLE void addToOrder(int id)
+    {
+        m_orderQuantities[id]++;
+        emit orderChanged();
     }
 
-    QHash<int, QByteArray> roleNames() const override {
-        return {{ProductIdRole, "productId"}, {NameRole, "name"}, {PriceRole, "price"}, {ImageRole, "image"}};
+    Q_INVOKABLE void clearOrder()
+    {
+        m_orderQuantities.clear();
+        emit orderChanged();
     }
 
-    const Product* findProduct(int id) const {
-        for (const Product &p : products)
-            if (p.id == id) return &p;
-        return nullptr;
-    }
-};
-
-// Cart manager
-class CartManager : public QObject {
-    Q_OBJECT
-    Q_PROPERTY(QVariantList cartItems READ cartItems NOTIFY cartChanged)
-    Q_PROPERTY(int itemCount READ itemCount NOTIFY cartChanged)
-    Q_PROPERTY(double totalPrice READ totalPrice NOTIFY cartChanged)
-
-    ProductModel *productModel;
-    QMap<int, int> quantities;
-
-public:
-    CartManager(ProductModel *model, QObject *parent = nullptr) 
-        : QObject(parent), productModel(model) {}
-
-    Q_INVOKABLE void addProduct(int id) {
-        if (productModel->findProduct(id)) {
-            quantities[id]++;
-            emit cartChanged();
-        }
-    }
-
-    Q_INVOKABLE void clearCart() {
-        if (!quantities.isEmpty()) {
-            quantities.clear();
-            emit cartChanged();
-        }
-    }
-
-    QVariantList cartItems() const {
+    Q_INVOKABLE QVariantList getOrderItems()
+    {
         QVariantList items;
-        for (auto it = quantities.cbegin(); it != quantities.cend(); ++it) {
-            const Product *p = productModel->findProduct(it.key());
-            if (p) {
-                QVariantMap item;
-                item["name"] = p->name;
-                item["quantity"] = it.value();
-                item["lineTotal"] = p->price * it.value();
-                items.append(item);
-            }
+        for (auto orderItem = m_orderQuantities.begin(); orderItem != m_orderQuantities.end(); ++orderItem) {
+            QVariantMap menuItem = findMenuItem(orderItem.key());
+            items.append(QVariantMap{
+                {"name", menuItem["name"]},
+                {"quantity", orderItem.value()},
+                {"lineTotal", menuItem["price"].toDouble() * orderItem.value()}
+            });
         }
         return items;
     }
 
-    int itemCount() const {
-        int total = 0;
-        for (int qty : quantities) total += qty;
-        return total;
-    }
-
-    double totalPrice() const {
+    Q_INVOKABLE double getOrderTotal()
+    {
         double total = 0;
-        for (auto it = quantities.cbegin(); it != quantities.cend(); ++it) {
-            const Product *p = productModel->findProduct(it.key());
-            if (p) total += p->price * it.value();
+        for (auto orderItem = m_orderQuantities.begin(); orderItem != m_orderQuantities.end(); ++orderItem) {
+            QVariantMap menuItem = findMenuItem(orderItem.key());
+            total += menuItem["price"].toDouble() * orderItem.value();
         }
         return total;
     }
 
 signals:
-    void cartChanged();
+    void orderChanged();
+
+private:
+    QVariantMap findMenuItem(int id)
+    {
+        for (int i = 0; i < m_menuItems.size(); i++) {
+            QVariantMap menuItem = m_menuItems[i].toMap();
+            if (menuItem["id"].toInt() == id) {
+                return menuItem;
+            }
+        }
+        return QVariantMap();
+    }
 };
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     QGuiApplication app(argc, argv);
 
-    ProductModel productModel;
-    CartManager cartManager(&productModel);
-
+    OrderManager orderManager;
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("productModel", &productModel);
-    engine.rootContext()->setContextProperty("cartManager", &cartManager);
 
+    engine.rootContext()->setContextProperty("orderManager", &orderManager);
     engine.loadFromModule("cartmanagerstruct", "Main");
     return app.exec();
 }

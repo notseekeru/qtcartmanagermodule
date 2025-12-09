@@ -5,10 +5,14 @@ ApplicationWindow {
     width: 800
     height: 600
     visible: true
-    title: "Cart Manager"
+    title: "Order App"
 
-    palette.windowText: "white"
-    palette.text: "white"
+    property int orderVersion: 0
+
+    Connections {
+        target: orderManager
+        function onOrderChanged() { orderVersion++ }
+    }
 
     Row {
         anchors.fill: parent
@@ -18,43 +22,37 @@ ApplicationWindow {
         Column {
             width: parent.width * 0.6
             height: parent.height
-            spacing: 5
-
-            Label { 
-                text: "Products"
-                color: "white"
-            }
-            
 
             ListView {
                 width: parent.width
-                height: parent.height - 30
-                model: productModel
+                height: parent.height
                 spacing: 5
+                clip: true
+                model: orderManager.getMenuItems()
 
                 delegate: Row {
                     spacing: 10
+
                     Image {
                         width: 60
                         height: 60
-                        source: image
                         fillMode: Image.PreserveAspectFit
-                        visible: image !== ""
+                        source: modelData.image
                     }
-                    Label { 
-                        text: name
+
+                    Label {
+                        text: modelData.name
                         color: "white"
-                        anchors.verticalCenter: parent.verticalCenter
                     }
-                    Label { 
-                        text: "$" + price.toFixed(2)
+
+                    Label {
+                        text: "$" + modelData.price.toFixed(2)
                         color: "white"
-                        anchors.verticalCenter: parent.verticalCenter
                     }
+
                     Button {
                         text: "Add"
-                        anchors.verticalCenter: parent.verticalCenter
-                        onClicked: cartManager.addProduct(productId)
+                        onClicked: orderManager.addToOrder(modelData.id)
                     }
                 }
             }
@@ -63,44 +61,47 @@ ApplicationWindow {
         Column {
             width: parent.width * 0.35
             height: parent.height
-            spacing: 5
 
             Row {
-                Label { 
-                    text: "Cart"
+                Label {
+                    text: "Your Order"
                     color: "white"
                 }
+
                 Button {
                     text: "Clear"
                     palette.buttonText: "black"
-                    onClicked: cartManager.clearCart()
+                    onClicked: orderManager.clearOrder()
                 }
             }
 
             ListView {
                 width: parent.width
                 height: parent.height - 60
-                model: cartManager.cartItems
                 spacing: 5
+                clip: true
+                model: orderVersion >= 0 ? orderManager.getOrderItems() : []
 
                 delegate: Row {
-                    Label { 
+                    Label {
                         text: modelData.name
                         color: "white"
                     }
-                    Label { 
+
+                    Label {
                         text: "Qty: " + modelData.quantity
                         color: "white"
                     }
-                    Label { 
+
+                    Label {
                         text: "$" + modelData.lineTotal.toFixed(2)
                         color: "white"
                     }
                 }
             }
 
-            Label { 
-                text: "Total: $" + cartManager.totalPrice.toFixed(2)
+            Label {
+                text: "Total: $" + orderManager.getOrderTotal().toFixed(2)
                 color: "white"
             }
         }
