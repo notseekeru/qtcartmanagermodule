@@ -1,0 +1,14 @@
+-rootPath
+C:/Users/Seekeru/Documents/qt/untitled
+-cmake-output
+-output-file
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug/.qt/qml_imports/appcartmanager_conf.cmake
+-importPath
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug/cartmanager
+-importPath
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug
+-importPath
+C:/Qt/6.10.1/llvm-mingw_64/qml
+-qrcFiles
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug/.qt/rcc/qmake_cartmanager.qrc
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug/.qt/rcc/appcartmanager_raw_qml_0.qrc

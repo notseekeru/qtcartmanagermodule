@@ -1,0 +1,10 @@
+--bare
+-I
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug
+-I
+C:/Qt/6.10.1/llvm-mingw_64/qml
+--resource
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug/.qt/rcc/qmake_untitled.qrc
+--resource
+C:/Users/Seekeru/Documents/qt/untitled/build/Desktop_Qt_6_10_1_llvm_mingw_64_bit-Debug/.qt/rcc/appuntitled_raw_qml_0.qrc
+C:/Users/Seekeru/Documents/qt/untitled/Main.qml

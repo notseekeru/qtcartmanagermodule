@@ -1,0 +1,6 @@
+module cartmanager
+typeinfo appcartmanager.qmltypes
+prefer :/qt/qml/cartmanager/
+Main 254.0 Main.qml
+depends QtQuick
+

@@ -1,0 +1,6 @@
+module cardmanager
+typeinfo appcardmanager.qmltypes
+prefer :/qt/qml/cardmanager/
+Main 254.0 Main.qml
+depends QtQuick
+

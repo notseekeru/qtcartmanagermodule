@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/qt/qml/cardmanager/">
+    <file alias="Main.qml">C:/Users/Seekeru/Documents/qt/untitled/Main.qml</file>
+  </qresource>
+</RCC>
+
