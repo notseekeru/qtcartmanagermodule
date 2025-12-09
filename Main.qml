@@ -7,6 +7,9 @@ ApplicationWindow {
     visible: true
     title: "Cart Manager"
 
+    palette.windowText: "white"
+    palette.text: "white"
+
     Row {
         anchors.fill: parent
         anchors.margins: 10
@@ -17,7 +20,11 @@ ApplicationWindow {
             height: parent.height
             spacing: 5
 
-            Label { text: "Products" }
+            Label { 
+                text: "Products"
+                color: "white"
+            }
+            
 
             ListView {
                 width: parent.width
@@ -36,10 +43,12 @@ ApplicationWindow {
                     }
                     Label { 
                         text: name
+                        color: "white"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Label { 
                         text: "$" + price.toFixed(2)
+                        color: "white"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Button {
@@ -57,9 +66,13 @@ ApplicationWindow {
             spacing: 5
 
             Row {
-                Label { text: "Cart" }
+                Label { 
+                    text: "Cart"
+                    color: "white"
+                }
                 Button {
                     text: "Clear"
+                    palette.buttonText: "black"
                     onClicked: cartManager.clearCart()
                 }
             }
@@ -71,13 +84,25 @@ ApplicationWindow {
                 spacing: 5
 
                 delegate: Row {
-                    Label { text: modelData.name }
-                    Label { text: "Qty: " + modelData.quantity }
-                    Label { text: "$" + modelData.lineTotal.toFixed(2) }
+                    Label { 
+                        text: modelData.name
+                        color: "white"
+                    }
+                    Label { 
+                        text: "Qty: " + modelData.quantity
+                        color: "white"
+                    }
+                    Label { 
+                        text: "$" + modelData.lineTotal.toFixed(2)
+                        color: "white"
+                    }
                 }
             }
 
-            Label { text: "Total: $" + cartManager.totalPrice.toFixed(2) }
+            Label { 
+                text: "Total: $" + cartManager.totalPrice.toFixed(2)
+                color: "white"
+            }
         }
     }
 }
