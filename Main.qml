@@ -10,7 +10,7 @@ ApplicationWindow {
     property int orderVersion: 0
 
     Connections {
-        target: orderManager
+        target: backend
         function onOrderChanged() { orderVersion++ }
     }
 
@@ -22,37 +22,55 @@ ApplicationWindow {
         Column {
             width: parent.width * 0.6
             height: parent.height
+            spacing: 10
 
-            ListView {
-                width: parent.width
-                height: parent.height
-                spacing: 5
-                clip: true
-                model: orderManager.getMenuItems()
+            Repeater {
+                model: backend.getCategories()
 
-                delegate: Row {
-                    spacing: 10
-
-                    Image {
-                        width: 60
-                        height: 60
-                        fillMode: Image.PreserveAspectFit
-                        source: modelData.image
-                    }
+                Column {
+                    width: parent.width
+                    spacing: 5
 
                     Label {
-                        text: modelData.name
+                        text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        font.bold: true
+                        font.pixelSize: 18
                         color: "white"
                     }
 
-                    Label {
-                        text: "$" + modelData.price.toFixed(2)
-                        color: "white"
-                    }
+                    ListView {
+                        width: parent.width
+                        height: contentHeight
+                        spacing: 5
+                        clip: true
+                        interactive: false
+                        model: backend.getMenuItemsByCategory(modelData)
 
-                    Button {
-                        text: "Add"
-                        onClicked: orderManager.addToOrder(modelData.id)
+                        delegate: Row {
+                            spacing: 10
+
+                            Image {
+                                width: 60
+                                height: 60
+                                fillMode: Image.PreserveAspectFit
+                                source: modelData.image
+                            }
+
+                            Label {
+                                text: modelData.name
+                                color: "white"
+                            }
+
+                            Label {
+                                text: "$" + modelData.price.toFixed(2)
+                                color: "white"
+                            }
+
+                            Button {
+                                text: "Add"
+                                onClicked: backend.addToOrder(modelData.id)
+                            }
+                        }
                     }
                 }
             }
@@ -71,7 +89,7 @@ ApplicationWindow {
                 Button {
                     text: "Clear"
                     palette.buttonText: "black"
-                    onClicked: orderManager.clearOrder()
+                    onClicked: backend.clearOrder()
                 }
             }
 
@@ -80,7 +98,7 @@ ApplicationWindow {
                 height: parent.height - 60
                 spacing: 5
                 clip: true
-                model: orderVersion >= 0 ? orderManager.getOrderItems() : []
+                model: orderVersion >= 0 ? backend.getOrderItems() : []
 
                 delegate: Row {
                     Label {
@@ -101,7 +119,7 @@ ApplicationWindow {
             }
 
             Label {
-                text: "Total: $" + orderManager.getOrderTotal().toFixed(2)
+                text: orderVersion >= 0 ? "Total: $" + backend.getOrderTotal().toFixed(2) : ""
                 color: "white"
             }
         }
